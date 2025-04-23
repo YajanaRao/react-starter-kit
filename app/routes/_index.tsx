@@ -1,26 +1,17 @@
-import { Button } from "~/components/ui/button";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "~/components/ui/card";
+import Counter from "@/components/counter";
+import Header from "@/components/Header";
+import HeroBanner from "@/components/HeroBanner";
+import Footer from "@/components/Footer";
 
 export default function Index() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-[350px]">
-        <CardHeader>
-          <CardTitle>Welcome to Remix!</CardTitle>
-          <CardDescription>
-            A modern web framework with shadcn/ui components
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button>Hello World!</Button>
-        </CardContent>
-      </Card>
+    <div className="min-h-screen flex flex-col">
+      <Header />
+      <main className="flex-grow">
+        <HeroBanner />
+        <Counter />
+      </main>
+      <Footer />
     </div>
   );
 }

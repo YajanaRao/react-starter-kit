@@ -1,45 +1,131 @@
-import { Button } from "~/components/ui/button";
+import * as React from "react";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardHeader,
   CardTitle,
   CardDescription,
   CardContent,
-} from "~/components/ui/card";
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { LoaderFunctionArgs } from "@remix-run/node";
-import { useLoaderData, Form } from "@remix-run/react";
+import { useLoaderData, Form, useFetcher } from "@remix-run/react";
 import { json } from "@remix-run/node";
+import { fetchResolvedQueries } from "@/service/api";
+
+type Chat = {
+  id: string;
+  question: string;
+  answer: string;
+  createdAt: string;
+  updatedAt: string;
+};
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  const response = await fetch("https://api.sampleapis.com/coffee/hot");
-  const data = await response.json();
-  return json(data);
+  const chats = await fetchResolvedQueries();
+  return json(chats);
 }
 
 export default function Index() {
-  const data = useLoaderData<typeof loader>();
-  console.log(data);
+  const chats = useLoaderData<typeof loader>();
+  const [selectedChatId, setSelectedChatId] = React.useState<string | null>(
+    null
+  );
+  const [newQuestion, setNewQuestion] = React.useState("");
+  const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
+  const fetcher = useFetcher();
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (newQuestion.trim()) {
+      console.log(Object.entries(chats).length + 2);
+      fetcher.submit(
+        {
+          intent: "create",
+          id: Object.entries(chats).length + 1,
+          question: newQuestion,
+          answer: "This is a placeholder answer",
+        },
+        { method: "POST", action: "/api/chat" }
+      );
+      setNewQuestion("");
+    }
+  };
+
   return (
-    <div className="min-h-screen flex  bg-background p-4">
-      <div className="flex-none flex-col  items-start">
-        {data.map((item: { id: number; title: string }) => (
-          <Form key={item.id} method="post">
-            <p>{item.title}</p>
+    <div className="min-h-screen flex bg-background">
+      {/* Sidebar */}
+      <div
+        className={`${
+          isSidebarOpen ? "w-64" : "w-0"
+        } transition-all duration-300 border-r border-border overflow-hidden`}
+      >
+        {/* Sidebar Toggle */}
+        <div className="flex">
+          <h2>Chats</h2>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          >
+            {isSidebarOpen ? <ChevronLeft /> : <ChevronRight />}
+          </Button>
+        </div>
+        <div className="p-4 h-full flex flex-col">
+          <div className="flex-1 overflow-y-auto space-y-2">
+            {Object.entries(chats).map(([id, item]) => (
+              <Button
+                key={id}
+                variant={selectedChatId === id ? "default" : "ghost"}
+                className="w-full justify-start"
+                onClick={() => setSelectedChatId(id)}
+              >
+                {item.question}
+              </Button>
+            ))}
+          </div>
+          <Form onSubmit={handleSubmit} className="mt-4">
+            <div className="flex gap-2">
+              <Input
+                value={newQuestion}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setNewQuestion(e.target.value)
+                }
+                placeholder="Ask a question..."
+                className="flex-1"
+              />
+              <Button type="submit">Add</Button>
+            </div>
           </Form>
-        ))}
+        </div>
       </div>
-      <div className="flex-1 flex-col justify-center items-center">
-        <Card className="w-[350px]">
-          <CardHeader>
-            <CardTitle>Welcome to Remix!</CardTitle>
-            <CardDescription>
-              A modern web framework with shadcn/ui components
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button>Hello World!</Button>
-          </CardContent>
-        </Card>
+
+      {/* Main Content */}
+      <div className="flex-1 p-4">
+        {selectedChatId ? (
+          <Card className="w-full">
+            <CardHeader>
+              <CardTitle>{chats[selectedChatId]?.question}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">
+                {chats[selectedChatId]?.answer}
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <Card className="w-[350px]">
+              <CardHeader>
+                <CardTitle>Welcome to Chat</CardTitle>
+                <CardDescription>
+                  Select a question from the sidebar to view its answer
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   );
