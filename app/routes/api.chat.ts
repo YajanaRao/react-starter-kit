@@ -1,8 +1,9 @@
 import { json } from "@remix-run/node";
 import { promises as fs } from "fs";
 import path from "path";
+import { emitter } from "@/events";
 
-const CHATS_FILE = path.join(process.cwd(), "app/data/chats.json");
+const CHATS_FILE = path.join(process.cwd(), "data/chats.json");
 
 type Chat = {
   id: number;
@@ -51,13 +52,16 @@ export async function action({ request }: { request: Request }) {
     }
 
     const data = await readChats();
-
-    data[id] = {
+    const newChat = {
       question,
       answer,
     };
-    await writeChats(data);
 
+    data[id] = newChat;
+    const queriesResolved = Object.entries(data).length;
+
+    await writeChats(data);
+    emitter.emit("chat:created", queriesResolved);
     return json(data);
   }
 

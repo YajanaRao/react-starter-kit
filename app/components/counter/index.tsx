@@ -1,21 +1,35 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import useQueryStore from "@/store/queries";
 import { Card } from "@/components/ui/card";
 import { Sparkles } from "lucide-react";
 import { fetchResolvedQueries } from "@/service/api";
+import { useIsOnline } from "@/hooks/useIsOnline";
 
 export default function LandingPage() {
+  const isOnline = useIsOnline();
   const { queries, setQueries } = useQueryStore();
+  const [queriesResolved, setQueriesResolved] = useState(0);
+
 
   useEffect(() => {
-    async function loadQueries() {
-      const data = await fetchResolvedQueries();
-      setQueries(data);
-    }
+    setQueriesResolved(Object.entries(queries).length);
 
-    window.addEventListener("focus", loadQueries);
-    return () => window.removeEventListener("focus", loadQueries);
-  }, [setQueries]);
+    const eventSource = new EventSource("/api/sse");
+
+    eventSource.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      setQueriesResolved(data.count);
+    };
+
+    eventSource.onerror = (err) => {
+      console.error("SSE Error:", err);
+      eventSource.close(); // Close on error
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, []);
 
   return (
     <div className="py-20 bg-gradient-to-b from-purple-50 to-white dark:from-purple-900/10 dark:to-background flex items-center justify-center">
@@ -28,7 +42,7 @@ export default function LandingPage() {
             </h2>
           </div>
           <p className="text-5xl font-bold text-purple-600 tracking-tight">
-            {Object.entries(queries).length}
+            {queriesResolved}
           </p>
           <p className="mt-4 text-gray-500 dark:text-gray-400">
             and counting...
